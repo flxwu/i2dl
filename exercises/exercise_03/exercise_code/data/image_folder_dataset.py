@@ -16,21 +16,22 @@ from .transforms import IdentityTransform
 
 class ImageFolderDataset(Dataset):
     """CIFAR-10 dataset class"""
-    def __init__(self, *args,
-                 transform=IdentityTransform(),
-                 download_url="https://i2dl.vc.in.tum.de/static/data/cifar10.zip",
-                 **kwargs):
-        super().__init__(*args, 
-                         download_url=download_url,
-                         **kwargs)
-        
+
+    def __init__(
+        self,
+        *args,
+        transform=IdentityTransform(),
+        download_url="https://i2dl.vc.in.tum.de/static/data/cifar10.zip",
+        **kwargs,
+    ):
+        super().__init__(*args, download_url=download_url, **kwargs)
+
         self.classes, self.class_to_idx = self._find_classes(self.root_path)
         self.images, self.labels = self.make_dataset(
-            directory=self.root_path,
-            class_to_idx=self.class_to_idx
+            directory=self.root_path, class_to_idx=self.class_to_idx
         )
         # transform function that we will apply later for data preprocessing
-      
+
         self.transform = transform
 
     @staticmethod
@@ -53,7 +54,7 @@ class ImageFolderDataset(Dataset):
         Create the image dataset by preparaing a list of samples
         Images are sorted in an ascending order by class and file name
         :param directory: root directory of the dataset
-        :param class_to_idx: A dict that maps classes to labels
+        :param class_to_idx: A dict that maps classes (e.g. 'cat') to labels (e.g. 1)
         :returns: (images, labels) where:
             - images is a list containing paths to all images in the dataset, NOT the actual images
             - labels is a list containing one label per image
@@ -63,6 +64,8 @@ class ImageFolderDataset(Dataset):
         for target_class in sorted(class_to_idx.keys()):
             label = class_to_idx[target_class]
             target_dir = os.path.join(directory, target_class)
+            # Why is there a loop here?
+            # target_dir is already `cifar10/bird`. So in there, there are no dirs to loop through
             for root, _, fnames in sorted(os.walk(target_dir)):
                 for fname in sorted(fnames):
                     if fname.endswith(".png"):
@@ -80,7 +83,7 @@ class ImageFolderDataset(Dataset):
         # Return the length of the dataset (number of images)                  #
         ########################################################################
 
-        pass
+        length = len(self.images)
 
         ########################################################################
         #                           END OF YOUR CODE                           #
@@ -106,7 +109,7 @@ class ImageFolderDataset(Dataset):
         #   file path. Note: you have to use "self.load_image_as_numpy()"      #
         #   and not "ImageFolderDataset.load_image_as_numpy()", as it will     #
         #  cause a bug, when using  MemoryImageFolderDataset                   #
-        #                                                                      # 
+        #                                                                      #
         # Hint 2:                                                              #
         #   If applicable (Task 4: 'Transforms and Image Preprocessing'),      #
         #   make sure to apply self.transform to the image if self.transform   #
@@ -116,13 +119,23 @@ class ImageFolderDataset(Dataset):
         # Hint 3:                                                              #
         #   The labels are supposed to be numbers, in the range of [0, 9],     #
         #   not strings.                                                       #
-        #                                                                      #    
+        #                                                                      #
         # Hint 4: the labels and images are already prepared and stored in     #
-        #  self.labels and self.images. DO NOT call self.make_dataset() again! #    
+        #  self.labels and self.images. DO NOT call self.make_dataset() again! #
         ########################################################################
-   
 
-        pass
+        image_path: str = self.images[index]
+        label: str = self.labels[index]
+
+        image_nparr = self.load_image_as_numpy(image_path=image_path)
+
+        if self.transform is not None:
+            image_nparr = self.transform(image_nparr)
+
+        data_dict = {
+            "image": image_nparr,
+            "label": label,
+        }
 
         ########################################################################
         #                           END OF YOUR CODE                           #
@@ -131,26 +144,27 @@ class ImageFolderDataset(Dataset):
 
 
 class MemoryImageFolderDataset(ImageFolderDataset):
-    def __init__(self, root, *args,
-                 transform=IdentityTransform(),
-                 download_url="https://i2dl.vc.in.tum.de/static/data/cifar10memory.zip",
-                 **kwargs):
+    def __init__(
+        self,
+        root,
+        *args,
+        transform=IdentityTransform(),
+        download_url="https://i2dl.vc.in.tum.de/static/data/cifar10memory.zip",
+        **kwargs,
+    ):
         # Fix the root directory automatically
-        if not root.endswith('memory'):
-            root += 'memory'
+        if not root.endswith("memory"):
+            root += "memory"
 
-        super().__init__(
-            root, *args, download_url=download_url, **kwargs)
-        
-        with open(os.path.join(
-            self.root_path, 'cifar10.pckl'
-            ), 'rb') as f:
+        super().__init__(root, *args, download_url=download_url, **kwargs)
+
+        with open(os.path.join(self.root_path, "cifar10.pckl"), "rb") as f:
             save_dict = pickle.load(f)
 
-        self.images = save_dict['images']
-        self.labels = save_dict['labels']
-        self.class_to_idx = save_dict['class_to_idx']
-        self.classes = save_dict['classes']
+        self.images = save_dict["images"]
+        self.labels = save_dict["labels"]
+        self.class_to_idx = save_dict["class_to_idx"]
+        self.classes = save_dict["classes"]
 
         self.transform = transform
 
@@ -158,5 +172,3 @@ class MemoryImageFolderDataset(ImageFolderDataset):
         """Here we already have everything in memory,
         so we can just return the image"""
         return image_path
-
-        
